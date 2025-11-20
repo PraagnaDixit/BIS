@@ -1,0 +1,47 @@
+import random, math
+
+NUM_PARTICLES = 40
+DIM = 1
+ITER = 80
+W = 0.7
+C1 = 1.6
+C2 = 1.6
+LB = -20
+UB = 20
+
+def energy(x):
+    return 5*x[0]**2 + 3*x[0] + 10
+
+particles = [[random.uniform(LB,UB) for _ in range(DIM)] for _ in range(NUM_PARTICLES)]
+velocity = [[random.uniform(-1,1) for _ in range(DIM)] for _ in range(NUM_PARTICLES)]
+
+pbest = particles[:]
+pbest_val = [energy(p) for p in particles]
+
+gbest_val = min(pbest_val)
+gbest = pbest[pbest_val.index(gbest_val)]
+
+for t in range(ITER):
+    for i in range(NUM_PARTICLES):
+        for d in range(DIM):
+            r1 = random.random()
+            r2 = random.random()
+            velocity[i][d] = (W*velocity[i][d] +
+                              C1*r1*(pbest[i][d] - particles[i][d]) +
+                              C2*r2*(gbest[d] - particles[i][d]))
+            particles[i][d] += velocity[i][d]
+            if particles[i][d] < LB: particles[i][d] = LB
+            if particles[i][d] > UB: particles[i][d] = UB
+
+        value = energy(particles[i])
+        if value < pbest_val[i]:
+            pbest[i] = particles[i][:]
+            pbest_val[i] = value
+            if value < gbest_val:
+                gbest = particles[i][:]
+                gbest_val = value
+
+    print(f"Iteration {t+1}: {gbest_val}")
+
+print("\nBest position:", gbest)
+print("Best energy:", gbest_val)
