@@ -1,0 +1,72 @@
+import random, math
+
+N=5
+coords=[(10,10),(20,30),(40,20),(25,5),(5,25)]
+dist=[[math.dist(coords[i],coords[j]) for j in range(N)] for i in range(N)]
+
+ANTS=20
+ITER=50
+ALPHA=1
+BETA=2
+RHO=0.5
+Q=100
+
+pher=[[1 for _ in range(N)] for _ in range(N)]
+
+def tour_length(t):
+    s=0
+    for i in range(N):
+        s+=dist[t[i]][t[(i+1)%N]]
+    return s
+
+def choose(curr,vis):
+    p=[]
+    for j in range(N):
+        if j not in vis:
+            p.append((pher[curr][j]**ALPHA)*(1/dist[curr][j])**BETA)
+        else:
+            p.append(0)
+    s=sum(p)
+    r=random.random()*s
+    c=0
+    for j in range(N):
+        c+=p[j]
+        if c>=r:
+            return j
+    return random.choice([j for j in range(N) if j not in vis])
+
+best=None
+best_len=1e9
+
+for it in range(1,ITER+1):
+    tours=[]
+    lengths=[]
+
+    for k in range(ANTS):
+        start=random.randrange(N)
+        t=[start]
+        while len(t)<N:
+            t.append(choose(t[-1],t))
+        tours.append(t)
+        lengths.append(tour_length(t))
+
+    for i in range(N):
+        for j in range(N):
+            pher[i][j]*=(1-RHO)
+
+    for t,l in zip(tours,lengths):
+        for i in range(N):
+            a=t[i]
+            b=t[(i+1)%N]
+            pher[a][b]+=Q/l
+            pher[b][a]+=Q/l
+
+    m=min(lengths)
+    if m<best_len:
+        best_len=m
+        best=tours[lengths.index(m)]
+
+    print(f"Iteration {it} best cost: {best_len}")
+
+print("\nBest tour:",best)
+print("Final best cost:",best_len
