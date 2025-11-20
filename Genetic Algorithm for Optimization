@@ -1,0 +1,57 @@
+Code:
+
+import numpy as np, random
+
+P=4; C=120; M=5
+SIM=3600; STEP=1
+ARR=[0.2,0.15,0.25,0.18]
+POP=30; GEN=40; CP=0.9; MP=0.3; EL=2
+
+def repair(g):
+    g=np.maximum(g,M)
+    g*=C/g.sum()
+    return g
+
+def simulate(g):
+    q=np.zeros(P); tw=0; s=0
+    ph=[(i,g[i]) for i in range(P)]
+    cyc=g.sum(); t=0
+    while t<SIM:
+        q+=np.random.poisson(np.array(ARR))
+        x=t%cyc; a=0
+        for i,d in ph:
+            if a+d>x: p=i; break
+            a+=d
+        d=min(q[p],0.6)
+        q[p]-=d; s+=d; tw+=q.sum()
+        t+=1
+    return tw/max(s,1e-6)
+
+def fit(c): return -simulate(c)
+
+def run():
+    pop=[repair(np.random.rand(P)) for _ in range(POP)]
+    for _ in range(GEN):
+        f=[fit(x) for x in pop]
+        new=[pop[i].copy() for i in np.argsort(f)[-EL:]]
+        while len(new)<POP:
+            a,b=random.sample(pop,2)
+            if random.random()<CP:
+                m=np.random.rand(P)<0.5
+                c1,c2=a.copy(),b.copy()
+                c1[m],c2[m]=b[m],a[m]
+            else: c1,c2=a.copy(),b.copy()
+            if random.random()<MP:
+                c1=repair(c1+np.random.normal(0,3,P))
+            if len(new)<POP:
+                new.append(repair(c1))
+            if len(new)<POP:
+                new.append(repair(c2))
+        pop=new
+    f=[fit(x) for x in pop]
+    b=pop[np.argmax(f)]
+    print("Best:",b,"Avg wait:",-max(f))
+
+run()
+
+
