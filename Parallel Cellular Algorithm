@@ -1,0 +1,88 @@
+import random, collections
+
+ROWS = 8
+COLS = 8
+NUM_PACKETS = 40
+ITER = 60
+
+def rand_cell():
+    return (random.randrange(ROWS), random.randrange(COLS))
+
+def manhattan(a,b):
+    return abs(a[0]-b[0]) + abs(a[1]-b[1])
+
+packets = []
+for pid in range(NUM_PACKETS):
+    s = rand_cell()
+    d = rand_cell()
+    while d == s:
+        d = rand_cell()
+    packets.append({'id':pid, 'pos':s, 'dest':d, 'delivered':False})
+
+delivered_total = 0
+dirs = [(0,1),(0,-1),(1,0),(-1,0),(0,0)]
+
+for t in range(1, ITER+1):
+    move_intents = {}
+    intent_from = {}
+
+    for p in packets:
+        if p['delivered']: continue
+        cur = p['pos']
+        dst = p['dest']
+        best = cur
+        bestd = manhattan(cur,dst)
+        candidates = []
+        for dx,dy in dirs:
+            nx,ny = cur[0]+dx, cur[1]+dy
+            if 0 <= nx < ROWS and 0 <= ny < COLS:
+                d = manhattan((nx,ny), dst)
+                if d < bestd:
+                    bestd = d
+                    candidates = [(nx,ny)]
+                elif d == bestd:
+                    candidates.append((nx,ny))
+        if candidates:
+            chosen = random.choice(candidates)
+        else:
+            chosen = cur
+        intent_from[p['id']] = chosen
+        move_intents.setdefault(chosen, []).append(p['id'])
+
+    resolved_moves = {}
+    for cell, pids in move_intents.items():
+        if len(pids) == 1:
+            resolved_moves[pids[0]] = cell
+        else:
+            pids_sorted = sorted(pids, key=lambda pid: manhattan([q for q in packets if q['id']==pid][0]['pos'], [q for q in packets if q['id']==pid][0]['dest']))
+            winner = pids_sorted[0]
+            resolved_moves[winner] = cell
+            for loser in pids_sorted[1:]:
+                resolved_moves[loser] = [q for q in packets if q['id']==loser][0]['pos']
+
+    delivered_this_iter = 0
+    for p in packets:
+        if p['delivered']: continue
+        nid = p['id']
+        if nid in resolved_moves:
+            p['pos'] = tuple(resolved_moves[nid]) if not isinstance(resolved_moves[nid], tuple) else resolved_moves[nid]
+        if p['pos'] == p['dest']:
+            p['delivered'] = True
+            delivered_this_iter += 1
+
+    delivered_total += delivered_this_iter
+
+    delivered_counts_by_cell = collections.Counter()
+    for p in packets:
+        if p['delivered']:
+            delivered_counts_by_cell[p['dest']] += 1
+    if delivered_counts_by_cell:
+        best_cell, best_count = delivered_counts_by_cell.most_common(1)[0]
+    else:
+        best_cell, best_count = (-1,-1), 0
+
+    print(f"Iteration {t} Best pos , postitin: {best_cell} delivered_count:{best_count}")
+
+print("\nTotal delivered:", delivered_total)
+print("Remaining packets:", sum(0 if p['delivered'] else 1 for p in packets))
+
