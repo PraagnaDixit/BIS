@@ -1,0 +1,68 @@
+import random, math
+
+N=15
+ITER=50
+DIM=4
+CYCLE=120
+MIN_G=5
+PA=0.25
+
+def repair(x):
+    x=[max(i,MIN_G) for i in x]
+    s=sum(x)
+    return [i*CYCLE/s for i in x]
+
+def waiting_time(g):
+    arr=[0.2,0.15,0.25,0.18]
+    sat=0.6
+    q=[0,0,0,0]
+    tw=0
+    t=0
+    T=2000
+    phases=[]
+    for i in range(DIM): phases.append((i,g[i]))
+    cyc=sum(g)
+    while t<T:
+        for i in range(4): q[i]+=random.poisson(lam=arr[i])
+        pos=t%cyc; a=0
+        for i,d in phases:
+            if a+d>pos: p=i; break
+            a+=d
+        d=min(q[p],sat)
+        q[p]-=d
+        tw+=sum(q)
+        t+=1
+    return -tw
+
+def levy():
+    u=random.gauss(0,1)
+    v=random.gauss(0,1)
+    return u/(abs(v)**0.5)
+
+nests=[repair([random.uniform(5,40) for _ in range(DIM)]) for _ in range(N)]
+fitness=[waiting_time(n) for n in nests]
+
+for it in range(1,ITER+1):
+    i=random.randrange(N)
+    step=levy()
+    new=[nests[i][d] + step*random.uniform(-1,1) for d in range(DIM)]
+    new=repair(new)
+    f_new=waiting_time(new)
+    if f_new>fitness[i]:
+        nests[i]=new
+        fitness[i]=f_new
+
+    for j in range(N):
+        if random.random()<PA:
+            rand=[random.uniform(5,40) for _ in range(DIM)]
+            rand=repair(rand)
+            nests[j]=rand
+            fitness[j]=waiting_time(rand)
+
+    best=max(fitness)
+    print(f"Iteration {it} best fitness: {best}")
+
+best_idx=fitness.index(max(fitness))
+print("\nBest green times:", nests[best_idx])
+print("Final best fitness:", fitness[best_idx])
+
