@@ -1,0 +1,50 @@
+import cv2, numpy as np, random, math
+
+img = cv2.imread("image.jpg", 0)
+hist = cv2.calcHist([img],[0],None,[256],[0,256]).flatten()
+pixels = img.size
+
+def fitness(T):
+    bg = hist[:T]; fg = hist[T:]
+    w0 = bg.sum()/pixels; w1 = fg.sum()/pixels
+    if w0 == 0 or w1 == 0: return 0
+    m0 = (np.arange(T)*bg).sum()/bg.sum()
+    m1 = (np.arange(T,256)*fg).sum()/fg.sum()
+    return w0*w1*(m0-m1)**2
+
+wolves = 20
+iters = 40
+pos = np.random.randint(1,255,size=wolves)
+fit = np.array([fitness(p) for p in pos])
+
+alpha = pos[np.argmax(fit)]
+beta = pos[np.argsort(fit)[-2]]
+delta = pos[np.argsort(fit)[-3]]
+
+for t in range(iters):
+    a = 2*(1 - t/iters)
+    for i in range(wolves):
+        Xs = []
+        for leader in [alpha, beta, delta]:
+            r1=random.random(); r2=random.random()
+            A=2*a*r1 - a; C=2*r2
+            D=abs(C*leader - pos[i])
+            Xs.append(leader - A*D)
+        pos[i] = int(sum(Xs)/3)
+        pos[i] = max(1, min(254, pos[i]))
+
+    fit = np.array([fitness(p) for p in pos])
+    alpha = pos[np.argmax(fit)]
+    beta = pos[np.argsort(fit)[-2]]
+    delta = pos[np.argsort(fit)[-3]]
+
+    print(f"Iteration {t+1} best fitness: {fit.max()}")
+
+best_score = fit.max()
+best_pos = alpha
+
+_, segmented = cv2.threshold(img, best_pos, 255, cv2.THRESH_BINARY)
+cv2.imwrite("segmented_output.png", segmented)
+
+print("\nBest score:", best_score)
+print("Best position:", best_pos)
